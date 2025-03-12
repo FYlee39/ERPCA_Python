@@ -1,7 +1,6 @@
 from eRPCA_py import eRPCA
 import numpy as np
 from scipy.linalg import svd
-import matplotlib.pyplot as plt
 
 
 def generate_L_S(p: int, mu: float, sigma: float,
@@ -30,11 +29,11 @@ def generate_L_S(p: int, mu: float, sigma: float,
     return L, S
 
 
-def single_group(p: int = 10, mu: float = 0, sigma: float = 1,
+def single_group_test(p: int = 10, mu: float = 0, sigma: float = 1,
                  lower: float = 0, upper: float = 1,
                  n: int = 500, rep_num: int = 30, type: str = "Bernoulli"):
     """
-    Perform a numerical experiments for certain dimmension
+    Perform a numerical experiments for certain dimension
     :param p: number of dimensions
     :param mu: mean of the gaussian distribution
     :param sigma: standard deviation of the gaussian distribution
@@ -47,10 +46,8 @@ def single_group(p: int = 10, mu: float = 0, sigma: float = 1,
     L_error = np.zeros(rep_num)
     S_error = np.zeros(rep_num)
     for rep in range(rep_num):
-        L, S = generate_L_S(p, mu=mu, sigma=sigma, lower=lower, upper=upper)
-        if len(S) == 1:
-            # single group
-            S = S[0]
+        L, S = generate_L_S(p, mu=mu, sigma=sigma, lower=lower, upper=upper, group=1)
+        S = S[0]
         theta = L + S
         M = np.zeros((p, p, n))
         for i in range(0, theta.shape[0]):
@@ -79,9 +76,9 @@ if __name__ == "__main__":
     p_list = [10, 20, 30]
     type_list = ["Bernoulli", "Exponential", "Poisson"]
 
-    L_1, S_1 = single_group(p=p_list[0], type=type_list[0], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
-    L_2, S_2 = single_group(p=p_list[1], type=type_list[1], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
-    L_3, S_3 = single_group(p=p_list[2], type=type_list[2], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
+    L_1, S_1 = single_group_test(p=p_list[0], type=type_list[0], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
+    L_2, S_2 = single_group_test(p=p_list[1], type=type_list[1], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
+    L_3, S_3 = single_group_test(p=p_list[2], type=type_list[2], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
 
     # multi-group
     pass
