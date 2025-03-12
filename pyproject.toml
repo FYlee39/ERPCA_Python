@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eRPCA_py"
+version = "0.1.0"
+authors = [{name = "yflee", email = "lee39.d.p@gmail.com"}]
+description = "Python implamentation of eRPCA based on 'eRPCA: Robust Principal Component Analysis for Exponential Family Distributions'"
+readme = "README.md"
+requires-python = ">=3.6"
+dependencies = ["numpy", "scipy", "pandas", "scikit-learn", "matplotlib"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Intended Audience :: Science/Research"
+]
