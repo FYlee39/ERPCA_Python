@@ -102,9 +102,9 @@ def multi_group_test(p: int = 10, mu: float = 0, sigma: float = 1,
                         pass
 
         erpca = eRPCA.ERPCA(observation_matrix=M)
-        L_est, S_est = erpca.run()
+        L_est, S_group_est = erpca.run()
         L_error[rep] = np.linalg.norm(L - L_est, ord="fro")
-        S_error[rep] = np.linalg.norm(S_group - S_est, ord="fro")
+        S_error[rep] = np.linalg.norm(S_group - S_group_est, axis=(0, 1), ord="fro")
 
     return L_error, S_error
 
@@ -115,9 +115,10 @@ if __name__ == "__main__":
     p_list = [10, 20, 30]
     type_list = ["Bernoulli", "Exponential", "Poisson"]
 
-    L_1, S_1 = single_group_test(p=p_list[0], type=type_list[0], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
-    L_2, S_2 = single_group_test(p=p_list[1], type=type_list[1], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
-    L_3, S_3 = single_group_test(p=p_list[2], type=type_list[2], mu=0.5, sigma=0.15, lower=0.2, upper=0.3)
+    L_1, S_1 = single_group_test(p=p_list[0], type=type_list[0], mu=0.5, sigma=0.15, lower=0.2, upper=0.3, n=100)
+    L_2, S_2 = single_group_test(p=p_list[1], type=type_list[1], mu=0.5, sigma=0.15, lower=0.2, upper=0.3, n=100)
+    L_3, S_3 = single_group_test(p=p_list[2], type=type_list[2], mu=0.5, sigma=0.15, lower=0.2, upper=0.3, n=100)
 
     # multi-group
-    pass
+    mL, mS = multi_group_test(p=p_list[0], type=type_list[0], mu=0.5, sigma=0.15, lower=0.2, upper=0.3, n=100, group=2)
+

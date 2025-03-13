@@ -2,6 +2,7 @@ import numpy as np
 from scipy.linalg import svd
 import matplotlib.pyplot as plt
 
+
 def solve_quadratic(a, b, c):
     """
     Function to solve quadratic equations ax^2 + bx + c = 0
@@ -20,30 +21,54 @@ class ERPCA(object):
     def __init__(self, observation_matrix: np.array,
                  eta_alpha: float = 0.5, eta_beta: float = 0.08,
                  rank_prior: float = 18, sparse_prior: float = 0.1,
-                 selection_size: int = 20, runs: int = 100):
+                 selection_size: int = 20, runs: int = 100, train_size: int = 10):
         """
         Initialize the penalty parameters
         """
-        self.sample = observation_matrix
-        self.eta_alpha = eta_alpha
-        self.eta_beta = eta_beta
+
         self.rank_prior = rank_prior
         self.sparse_prior = sparse_prior
         self.selection_size = selection_size
         self.runs = runs
-        self.alpha = None
-        self.beta = None
-        self.mu = None
-        self.L_matrix = None
-        self.S_matrix = None
-        self.__tuning_parameters()
 
-    def __tuning_parameters(self):
+        if len(observation_matrix.shape) == 3:
+            self.group_num = 1
+            self.sample = np.expand_dims(observation_matrix, axis=-1)
+        else:
+            self.group_num = observation_matrix.shape[-1]
+            self.sample = observation_matrix
+
+        self.eta_alpha = eta_alpha
+        self.eta_beta = eta_beta
+
+        self.alpha = [None for _ in range(self.group_num)]
+        self.beta = [None for _ in range(self.group_num)]
+        self.mu = [None for _ in range(self.group_num)]
+
+        self.L_matrix = None
+        self.S_matrix_group = None
+
+        for g in range(self.group_num):
+            self.alpha[g], self.beta[g], self.mu[g] = \
+                self.__tuning_parameters(self.sample[:, :, train_size, g], g)
+
+        if self.group_num == 1:
+            self.alpha_total = self.alpha[0]
+            self.beta_total = self.beta[0]
+            self.mu_total = self.mu[0]
+
+        else:
+            d1, d2, d3, d4 = self.sample.shape
+            self.alpha_total, self.beta_total, self.mu_total = \
+                self.__tuning_parameters(self.sample.reshape(d1, d2, d3 * d4, 1)[:, :, train_size])
+
+    def __tuning_parameters(self, train_obs, group_i=None):
         """
         Hyperparameters Tuning for eRPCA
+        :param train_obs: training observations for tunning parameters
+        :param group_i: group indicator
         :return: tuning parameters
         """
-        train_obs = self.sample[:, :, 0: 10]
         m_1 = train_obs.shape[0]
         m_2 = train_obs.shape[1]
 
@@ -70,7 +95,16 @@ class ERPCA(object):
 
         # Hyperparameter selection loop
         for i in range(0, self.selection_size - 1):
-            L_all, S_all, P_all, Y_all = self.__mc_function_mle(obs_test=self.sample, mu=mu_0, alpha=alpha_select[i], beta=beta_select[i])
+            if group_i is None:
+                L_all, S_all, P_all, Y_all = self.__mc_function_mle(obs_test=self.sample,
+                                                                    mu=mu_0,
+                                                                    alpha=alpha_select[i],
+                                                                    beta=beta_select[i])
+            else:
+                L_all, S_all, P_all, Y_all = self.__mc_function_mle(obs_test=self.sample[:, :, :, group_i],
+                                                                    mu=mu_0,
+                                                                    alpha=alpha_select[i],
+                                                                    beta=beta_select[i])
 
             S_all[:, :, self.runs - 1][np.abs(S_all[:, :, self.runs - 1]) <= 1e-5] = 0
 
@@ -81,12 +115,15 @@ class ERPCA(object):
             if (rank_all[i] > self.rank_prior) & (sparse_all[i] > self.sparse_prior):
                 alpha_select[i + 1] = alpha_select[i] + self.eta_alpha
                 beta_select[i + 1] = beta_select[i] + self.eta_beta
+
             elif (rank_all[i] <= self.rank_prior) & (sparse_all[i] > self.sparse_prior):
                 alpha_select[i + 1] = alpha_select[i]
                 beta_select[i + 1] = beta_select[i] + self.eta_beta
+
             elif (rank_all[i] > self.rank_prior) & (sparse_all[i] <= self.sparse_prior):
                 alpha_select[i + 1] = alpha_select[i] + self.eta_alpha
                 beta_select[i + 1] = beta_select[i]
+
             elif (rank_all[i] <= self.rank_prior) & (sparse_all[i] <= self.sparse_prior):
                 alpha_select[i + 1] = alpha_select[i]
                 beta_select[i + 1] = beta_select[i]
@@ -98,32 +135,25 @@ class ERPCA(object):
         m_1 = train_obs.shape[0]
         m_2 = train_obs.shape[1]
 
-        self.alpha = alpha_select[alpha_select != -100][-1]
-        self.beta = beta_select[beta_select != -100][-1]
-        self.mu = (m_1 * m_2) / (4 * np.nansum(np.abs(train_obs)))
+        return (alpha_select[alpha_select != -100][-1],
+                beta_select[beta_select != -100][-1],
+                (m_1 * m_2) / (4 * np.nansum(np.abs(train_obs))))
 
     def __mc_function_mle(self, obs_test: np.array, mu: np.array,
-                         alpha: np.array, beta: np.array):
+                          alpha: np.array, beta: np.array, L=None):
         """
         Main function for RPCA
         :param obs_test: observations
-        :param runs: number of runs
         :param mu:
         :param alpha:
         :param beta:
+        :param L:
         :return:
         """
         m_1 = obs_test.shape[0]
         m_2 = obs_test.shape[1]
-        obs_test_mean = np.nanmean(obs_test, axis=2)
-        U, S, Vh = svd(obs_test_mean, full_matrices=False)
 
         # initialization
-        L = U @ np.diag(
-            np.append(S[0: 2], np.zeros((min((m_1, m_2)) - 2)))
-        ) @ Vh
-        Y = np.zeros((m_1, m_2))
-        P = np.ones((m_1, m_2))
 
         # create empty arrays to store the results
         P_all = np.zeros((m_1, m_2, self.runs))
@@ -131,14 +161,30 @@ class ERPCA(object):
         L_all = np.zeros((m_1, m_2, self.runs))
         Y_all = np.zeros((m_1, m_2, self.runs))
 
+        is_L_given = False
+
+        if L is None:
+            obs_test_mean = np.nanmean(obs_test, axis=2)
+            U, S, Vh = svd(obs_test_mean, full_matrices=False)
+            L = U @ np.diag(
+                np.append(S[0: 2], np.zeros((min((m_1, m_2)) - 2)))
+            ) @ Vh
+            L_all[:, :, 0] = L
+
+        else:
+            L_all[:, :, :] = L
+            is_L_given = True
+
+        Y = np.zeros((m_1, m_2))
+        P = np.ones((m_1, m_2))
+
         # initialize the first iteration
-        L_all[:, :, 0] = L
         P_all[:, :, 0] = P
         Y_all[:, :, 0] = Y
 
-        return self.__mc_samp(P_all, S_all, Y_all, L_all, obs_test, alpha, beta, mu)
+        return self.__mc_samp(P_all, S_all, Y_all, L_all, obs_test, alpha, beta, mu, is_L_given)
 
-    def __mc_samp(self, P_all, S_all, Y_all, L_all, obs_test, alpha, beta, mu):
+    def __mc_samp(self, P_all, S_all, Y_all, L_all, obs_test, alpha, beta, mu, is_L_given):
         """
         Monte Carlo sampling for ERPCA
         :param P_all:
@@ -149,6 +195,7 @@ class ERPCA(object):
         :param alpha:
         :param beta:
         :param mu:
+        :param is_L_given: whether update L
         :return: result
         """
         # Update S matrix
@@ -157,9 +204,11 @@ class ERPCA(object):
             S_all[:, :, i + 1] = S_new
 
             # Update L matrix
-            L_new = self.__update_L(P_all[:, :, i], S_all[:, :, i + 1], Y_all[:, :, i], alpha, mu,
-                                    m1=obs_test[:, :, 1].shape[0], m2=obs_test[:, :, 1].shape[1])
-            L_all[:, :, i + 1] = L_new
+            if is_L_given:
+                pass
+            else:
+                L_new = self.__update_L(P_all[:, :, i], S_all[:, :, i + 1], Y_all[:, :, i], alpha, mu)
+                L_all[:, :, i + 1] = L_new
 
             # Update P matrix
             P_new = self.__update_P(L_all[:, :, i + 1], S_all[:, :, i + 1], Y_all[:, :, i], obs_test,
@@ -189,16 +238,14 @@ class ERPCA(object):
         S_new = np.sign(X) * np.maximum(np.abs(X) - tau, 0)
         return S_new
 
-    def __update_L(self, P_k, S_k, Y_k, alpha, mu, m1, m2):
+    def __update_L(self, P_k, S_k, Y_k, alpha, mu):
         """
         Function to update matrix L
         :param P_k: 
         :param S_k: 
         :param Y_k: 
         :param alpha: 
-        :param mu: 
-        :param m1: 
-        :param m2:
+        :param mu:
         :return: new matrix L
         """
         X = P_k - S_k + (1 / mu) * Y_k
@@ -243,13 +290,42 @@ class ERPCA(object):
         Main function for recover matrix
         :return: recovered matrix
         """
-        L_all, S_all, P_all, Y_all = self.__mc_function_mle(self.sample, mu=self.mu, alpha=self.alpha, beta=self.beta)
-        S_all[:, :, self.runs - 1][np.abs(S_all[:, :, self.runs - 1]) <= 1e-5] = 0
+        if self.group_num == 1:
+            L_all, S_all, P_all, Y_all = self.__mc_function_mle(self.sample[:, :, :, 0],
+                                                                mu=self.mu[0],
+                                                                alpha=self.alpha[0],
+                                                                beta=self.beta[0])
+            S_all[:, :, self.runs - 1][np.abs(S_all[:, :, self.runs - 1]) <= 1e-5] = 0
 
-        self.L_matrix = L_all[:, :, self.runs - 1]
-        self.S_matrix = S_all[:, :, self.runs - 1]
+            self.L_matrix = L_all[:, :, self.runs - 1]
+            self.S_matrix_group = S_all[:, :, self.runs - 1]
 
-        return self.L_matrix, self.S_matrix
+            return self.L_matrix, self.S_matrix_group
+        else:
+            # through algorithm 1 to compute L_tilde
+            d1, d2, d3, d4 = self.sample.shape
+            L_all, _, _, _ = self.__mc_function_mle(self.sample.reshape(d1, d2, d3 * d4),
+                                                    mu=self.mu[0],
+                                                    alpha=self.alpha[0],
+                                                    beta=self.beta[0])
+
+            L_tilde = L_all[:, :, self.runs - 1]
+
+            self.S_matrix_group = np.zeros((d1, d2, self.group_num))
+
+            for g in range(self.group_num):
+                _, S_all, _, _ = self.__mc_function_mle(self.sample[:, :, :, g],
+                                                        mu=self.mu[g],
+                                                        alpha=self.alpha[g],
+                                                        beta=self.beta[g],
+                                                        L=L_tilde)
+                S_all[:, :, self.runs - 1][np.abs(S_all[:, :, self.runs - 1]) <= 1e-5] = 0
+
+                self.S_matrix_group[:, :, g] = S_all[:, :, self.runs - 1]
+
+            self.L_matrix = L_tilde
+            return self.L_matrix, self.S_matrix_group
+
 
 # Function to plot grayscale image
 def plot_matrix(matrix, title):
@@ -259,6 +335,7 @@ def plot_matrix(matrix, title):
     plt.yticks([])  # Remove y-axis ticks
     plt.colorbar()
     plt.show()
+
 
 if __name__ == '__main__':
     pass
