@@ -52,15 +52,10 @@ class ERPCA(object):
             self.alpha[g], self.beta[g], self.mu[g] = \
                 self.__tuning_parameters(self.sample[:, :, train_size, g], g)
 
-        if self.group_num == 1:
-            self.alpha_total = self.alpha[0]
-            self.beta_total = self.beta[0]
-            self.mu_total = self.mu[0]
 
-        else:
-            d1, d2, d3, d4 = self.sample.shape
-            self.alpha_total, self.beta_total, self.mu_total = \
-                self.__tuning_parameters(self.sample.reshape(d1, d2, d3 * d4, 1)[:, :, train_size])
+        self.alpha_total = self.alpha[0]
+        self.beta_total = self.beta[0]
+        self.mu_total = self.mu[0]
 
     def __tuning_parameters(self, train_obs, group_i=None):
         """
@@ -212,7 +207,7 @@ class ERPCA(object):
 
             # Update P matrix
             P_new = self.__update_P(L_all[:, :, i + 1], S_all[:, :, i + 1], Y_all[:, :, i], obs_test,
-                                    m1=obs_test[:, :, 1].shape[0], m2=obs_test[:, :, 1].shape[1], mu=mu)
+                                    m1=obs_test.shape[0], m2=obs_test.shape[1], mu=mu)
             P_all[:, :, i + 1] = P_new
 
             # Update Y matrix

@@ -87,7 +87,7 @@ def multi_group_test(p: int = 10, mu: float = 0, sigma: float = 1,
     S_error = np.zeros((rep_num, group))
     for rep in range(rep_num):
         L, S_group = generate_L_S(p, mu=mu, sigma=sigma, lower=lower, upper=upper, group=group)
-        theta_group = L + S_group
+        theta_group = L[..., np.newaxis] + S_group
         M = np.zeros((p, p, n, group))
         for g in range(0, group):
             for i in range(0, theta_group.shape[0]):
