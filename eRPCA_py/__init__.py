@@ -12,7 +12,7 @@ The package implements Algorithm 1, 2 & 3 of the paper [1]_.
     eRPCA: Robust Principal Component Analysis for Exponential Family Distributions.
     Statistical Analysis and Data Mining: An ASA Data Science Journal, 17(2):e11670, 2024.
     doi: https://doi.org/10.1002/sam.11670.
-    URL https://onlinelibrary.wiley.com/doi/abs/10.1002/sam.11670._eprint: https://onlinelibrary.wiley.com/doi/pdf/10.1002/sam.11670.
+    URL: https://onlinelibrary.wiley.com/doi/pdf/10.1002/sam.11670.
 
 Examples
 --------
