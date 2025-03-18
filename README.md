@@ -32,7 +32,7 @@ L_single, S_single = erpca.run()
 
 # multi-group
 data_sample_group = np.random.random((20, 20, 20, 2))
-erpca_group = eRPCA.ERPCA(observation_matrix=data_sample)
+erpca_group = eRPCA.ERPCA(observation_matrix=data_sample_group)
 L_group, S_group = erpca_group.run()
 ```
 
