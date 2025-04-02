@@ -93,11 +93,28 @@ def multi_group_test(p: int = 10, mu: float = 0, sigma: float = 1,
             for i in range(0, theta_group.shape[0]):
                 for j in range(0, theta_group.shape[1]):
                     if type == "Bernoulli":
-                        M[i, j, :, g] = np.random.binomial(n=1, p=theta_group[i, j, g], size=n)
+                        if theta_group[i, j, g] >= 1:
+                            param_p = 1
+                        elif theta_group[i, j, g] <= 0:
+                            param_p = 0
+                        else:
+                            param_p = theta_group[i, j, g]
+                        M[i, j, :, g] = np.random.binomial(n=1, p=param_p, size=n)
+
                     elif type == "Exponential":
-                        M[i, j, :, g] = np.random.exponential(size=n, scale=1 / theta_group[i, j, g])
+                        if theta_group[i, j, g] < 0:
+                            param_scale = 0
+                        else:
+                            param_scale = 1 / theta_group[i, j, g]
+                        M[i, j, :, g] = np.random.exponential(size=n, scale=param_scale)
+
                     elif type == "Poisson":
-                        M[i, j, :, g] = np.random.poisson(lam=theta_group[i, j, g], size=n)
+                        if theta_group[i, j, g] < 0:
+                            param_lam = 0
+                        else:
+                            param_lam = theta_group[i, j, g]
+                        M[i, j, :, g] = np.random.poisson(lam=param_lam, size=n)
+
                     else:
                         pass
 

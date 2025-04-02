@@ -53,10 +53,6 @@ class ERPCA(object):
                 self.__tuning_parameters(self.sample[:, :, train_size, g], g)
 
 
-        self.alpha_total = self.alpha[0]
-        self.beta_total = self.beta[0]
-        self.mu_total = self.mu[0]
-
     def __tuning_parameters(self, train_obs, group_i=None):
         """
         Hyperparameters Tuning for eRPCA
@@ -167,7 +163,7 @@ class ERPCA(object):
             L_all[:, :, 0] = L
 
         else:
-            L_all[:, :, :] = L
+            L_all[:, :, :] = L[:, :, np.newaxis]
             is_L_given = True
 
         Y = np.zeros((m_1, m_2))
