@@ -14,7 +14,7 @@ To install the package from repository:
 
 
 ```sh
-pip install git+https://github.com/FYlee39/ERPCA_Python.git@v1.0.0
+pip install git+https://github.com/FYlee39/ERPCA_Python.git@v1.0.1
 ```
 
 ## Usage
