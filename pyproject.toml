@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eRPCA_py"
-version = "0.1.0"
+version = "1.0.1"
 authors = [{name = "yflee", email = "lee39.d.p@gmail.com"}]
 description = "Python implamentation of eRPCA based on 'eRPCA: Robust Principal Component Analysis for Exponential Family Distributions'"
 readme = "README.md"
